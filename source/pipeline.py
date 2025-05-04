@@ -29,11 +29,11 @@ from sklearn.model_selection import train_test_split, cross_val_predict #separar
 def bandpass_filter (sig, fs, lowcut = 0.5, highcut = 40.0, order = 4):
     nyq = fs/2
     b, a = butter(order, [lowcut/nyq, highcut/nyq], btype = 'band')
-    return filtfilt(b, a, sig)
+    return filtfilt(b, a, sig) # la sortida és el senyal filtrat
 
 def notch_filter (sig, fs, freq = 50.0, Q = 30):
     b, a = iirnotch(freq/(fs/2),Q )
-    return filtfilt(b, a, sig)
+    return filtfilt(b, a, sig) # la sortida és el senyal filtrat
 
 # ---------------
 # Detecció QRS
@@ -53,4 +53,29 @@ def extract_rr_parameters(qrs_inds, fs):
     nn50 = np.sum(np.abs(np.diff(rr)) > 0.05)
     pnn50 = nn50 / len(rr) * 100                         # pNN50
 
-    return {'meanRR': mean_rr, 'stdRR': std_rr, 'RMSSD': rmssd, 'pNN50': pnn50}
+    return {'rr': rr,'meanRR': mean_rr, 'stdRR': std_rr, 'RMSSD': rmssd, 'pNN50': pnn50} # la salida es un diccionario
+
+
+
+# Vamos a probar con una de las muestras de la base de datos disponibles
+# Ruta al registro
+record_path = '../data/MIT-BIH_afdb/05091'
+# Leer la señal y anotaciones
+record = wfdb.rdrecord(record_path)
+annotation = wfdb.rdann(record_path, 'atr')
+
+# Mostrar información básica
+print("Señal:", record.p_signal.shape)
+print("Frecuencia de muestreo:", record.fs)
+print("Número de anotaciones:", len(annotation.sample))
+print("Tipos de eventos:", annotation.symbol)
+
+# Aplicamos los filtros a la señal
+filtered_signal= bandpass_filter (record.p_signal[:, 0], record.fs, lowcut = 0.5, highcut = 40.0, order = 4)
+filtered_signal = notch_filter(filtered_signal,record.fs,50,30)
+
+# Detecció QRS
+qrs_inds = wfdb.processing.gqrs_detect(filtered_signal, record.fs)
+
+# Extracció de paràmetres
+extract_rr_parameters(qrs_inds, record.fs)

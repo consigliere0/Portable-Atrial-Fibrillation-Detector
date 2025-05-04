@@ -1,6 +1,9 @@
 00735	Signals unavailable
 03665	Signals unavailable
-04043	Block 39 is unreadable
+04015   ok 
+04043	Block 39 is unreadable. not seen when plotting
+04048	ok
+04126   ok
 04936	(this was the only record for which signals were previously available)
 05091	Corrected QRS annotations are available (annotator qrsc)
 06453	Recording ends after about 9 hours, 15 minutes
@@ -8,3 +11,7 @@
 08405	No start time; block 1067 is unreadable
 08434	Blocks 648, 857, and 894 are unreadable
 08455	No start time
+
+
+
+Parece que solo se etiquetan cambios de ritmo
