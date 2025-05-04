@@ -71,11 +71,23 @@ print("Número de anotaciones:", len(annotation.sample))
 print("Tipos de eventos:", annotation.symbol)
 
 # Aplicamos los filtros a la señal
-filtered_signal= bandpass_filter (record.p_signal[:, 0], record.fs, lowcut = 0.5, highcut = 40.0, order = 4)
+filtered_signal= bandpass_filter (record.p_signal[0:2000, 0] #recortamos la señal en las pruebas para ganar velocidad
+                                  , record.fs, lowcut = 0.5, highcut = 40.0, order = 4)
 filtered_signal = notch_filter(filtered_signal,record.fs,50,30)
 
 # Detecció QRS
-qrs_inds = wfdb.processing.gqrs_detect(filtered_signal, record.fs)
+# La opción de Laura no me funciona, pq no reconoce "processing" dentro de wfdb
+# qrs_inds = wfdb.processing.gqrs_detect(filtered_signal, record.fs)
+# Le pedimos una alternativa al chatgpt
+
+from biosppy.signals import ecg
+
+out = ecg.ecg(signal=filtered_signal, sampling_rate=record.fs, show=False)
+qrs_inds = out['rpeaks']
 
 # Extracció de paràmetres
-extract_rr_parameters(qrs_inds, record.fs)
+
+RR_parameters=extract_rr_parameters(qrs_inds, record.fs)
+print(RR_parameters)
+
+# Como las muestras son grandes, de bastante tiempo, el procesamiento es lento
