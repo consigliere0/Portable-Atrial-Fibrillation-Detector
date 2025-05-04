@@ -59,7 +59,7 @@ def extract_rr_parameters(qrs_inds, fs):
 
 # Vamos a probar con una de las muestras de la base de datos disponibles
 # Ruta al registro
-record_path = '../data/MIT-BIH_afdb/05091'
+record_path = '../data/Long-Term_AF/00'
 # Leer la señal y anotaciones
 record = wfdb.rdrecord(record_path)
 annotation = wfdb.rdann(record_path, 'atr')
@@ -68,7 +68,7 @@ annotation = wfdb.rdann(record_path, 'atr')
 print("Señal:", record.p_signal.shape)
 print("Frecuencia de muestreo:", record.fs)
 print("Número de anotaciones:", len(annotation.sample))
-print("Tipos de eventos:", annotation.symbol)
+#print("Tipos de eventos:", annotation.symbol)
 
 # Aplicamos los filtros a la señal
 filtered_signal= bandpass_filter (record.p_signal[0:2000, 0] #recortamos la señal en las pruebas para ganar velocidad
@@ -88,6 +88,10 @@ qrs_inds = out['rpeaks']
 # Extracció de paràmetres
 
 RR_parameters=extract_rr_parameters(qrs_inds, record.fs)
-print(RR_parameters)
+print(RR_parameters['pNN50'])
 
-# Como las muestras son grandes, de bastante tiempo, el procesamiento es lento
+# Las anotaciones que tenemos solo nos indican cuando hay cambios de ritmo.
+# Si hacemos la extracción de los parámetros QRS de tohdo,
+#  aunque haya una parte con FA, el resto la compensará y, en promedio, el paciente "estará sano".
+# USAR LAS ESTIQUETAS COMO CORTE? QUE CALCULE QRS DE CADA SEGMENTO?
+# ENTRENAR CON LOS SEGMENTOS EL MACHINE LEARNING, ETIQUETADOS CON SI TIENEN O NO FA = RITMO POR ENCIMA DE X?
