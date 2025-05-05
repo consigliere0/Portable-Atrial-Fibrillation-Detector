@@ -95,3 +95,30 @@ print(RR_parameters['pNN50'])
 #  aunque haya una parte con FA, el resto la compensará y, en promedio, el paciente "estará sano".
 # USAR LAS ESTIQUETAS COMO CORTE? QUE CALCULE QRS DE CADA SEGMENTO?
 # ENTRENAR CON LOS SEGMENTOS EL MACHINE LEARNING, ETIQUETADOS CON SI TIENEN O NO FA = RITMO POR ENCIMA DE X?
+
+'''
+
+# -----------------------------------
+# Càrrega i preparació de finestres
+# -----------------------------------
+def load_windows(record_path, window_sec=30):
+    record = wfdb.rdrecord(record.path)         
+    ann = wfdb.rdann(record_path, 'atr')        # llegeix les anotacions mèdiques 'ann' x saber quan hi ha AF
+    sig = record.p_signal[:,0]                  # carrega el senyal
+    fs = record.fs                              # carrega la freqüència de mostreig
+
+    # Filtrar el senyal
+    sig_f = bandpass_filter(sig, fs)
+    sig_f = notch_filter(sig_f, fs)
+
+    # Detectar pics QRS
+    qrs_inds = detect_qrs(sig_f, fs)
+
+    # Preparar finestres
+    samples_per_win = window_sec * fs
+    num_windows = int(len(sig_f) / samples_per_win) # dividim el senyal en finestres de 30s
+    X = []
+    y = []
+    
+    for w in range(num_windows):
+'''
