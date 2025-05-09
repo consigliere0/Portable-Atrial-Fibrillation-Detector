@@ -1,7 +1,7 @@
 import wfdb
 import matplotlib.pyplot as plt
 import numpy as np
-
+#ldkdkdkd
 # Ruta al registro sin extensión
 record_path = '../data/Long-Term_AF/05'
 # record_path = '../data/MIT-BIH_afdb/04126'
@@ -49,8 +49,6 @@ for indice, item in enumerate(annotation.symbol): # Revisar todas las anotacione
 print('Número de eventos: ', len(eventos))
 print("Tipos de eventos:", eventos)
 print("Índices de los eventos: ", evento_indices)
-
-
 
 
 # Graficar la señal con anotaciones
