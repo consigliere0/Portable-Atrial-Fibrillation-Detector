@@ -1,7 +1,7 @@
 import wfdb
 import matplotlib.pyplot as plt
 import numpy as np
-#ldkdkdkd
+#ldkdkds
 # Ruta al registro sin extensión
 record_path = '../data/Long-Term_AF/05'
 # record_path = '../data/MIT-BIH_afdb/04126'
