@@ -1,49 +1,54 @@
-import sys
-import os
-
-# Afegim 'source/' al path per poder importar pipeline.py
-sys.path.append(os.path.join(os.path.dirname(__file__), 'source'))
-
-print("Paths actius:", sys.path)
-print("Fitxers disponibles a 'source':", os.listdir(os.path.join(os.path.dirname(__file__), 'source')))
-
-import numpy as np  # ✅ Importem numpy
-try:
-    from pipeline import load_windows, evaluate_model, train_model
-except ModuleNotFoundError as e:
-    print(f"❌ Error: {e}. Ensure 'source/pipeline.py' exists and is correctly placed.")
-    sys.exit(1)
+import sys, os
+import numpy as np
 import joblib
 
+# Afegim el path al pipeline
+sys.path.append(os.path.join(os.path.dirname(__file__), 'source'))
+from pipeline import load_windows
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+def evaluate_and_train(X, y):
+    unique, counts = np.unique(y, return_counts=True)
+    print("Distribució de classes:", dict(zip(unique, counts)))
+    if len(unique) < 2:
+        print("⚠️ No hi ha prou varietat de classes per entrenar/avaluar.")
+        return None
+
+    clf = Pipeline([
+        ('scaler', StandardScaler()),
+        ('rf', RandomForestClassifier(n_estimators=100, random_state=42))
+    ])
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    scores = cross_val_score(clf, X, y, cv=cv, scoring='roc_auc')
+    print(f'AUC mitjana (5-fold estrat.): {np.nanmean(scores):.3f}')
+
+    clf.fit(X, y)
+    return clf
+
 def main():
-    records = ["04043", "04015", "04048", "04126", "04746"]
-    db_path = "data/MIT-BIH_afdb"  # ✅ Definim db_path dins de main()
+    records = ["04126", "04746"]
+    db_path = "data_prova"
+    window_sec = 10
+    min_af_sec = 0.0
 
-    X_all = []
-    y_all = []
+    X_all, y_all = [], []
+    for rec in records:
+        X, y = load_windows(rec, db_path, window_sec, min_af_sec)
+        print(f"{rec}: {len(X)} finestres, AF positives: {sum(y)}")
+        X_all.extend(X)
+        y_all.extend(y)
 
-    for record in records:
-        try:
-            X, y = load_windows(record, db_path)
-            X_all.extend(X)
-            y_all.extend(y)
-            print(f"✅ {record}: {len(X)} finestres carregades.")
-        except Exception as e:
-            print(f"❌ Error carregant {record}: {e}")
+    X_all = np.array(X_all); y_all = np.array(y_all)
+    print(f"TOTAL finestres: {len(X_all)}")
 
-    X_all = np.array(X_all)
-    y_all = np.array(y_all)
-
-    print(f"📊 Total: {len(X_all)} finestres carregades.")
-
-    print("📊 Avaluant model amb validació creuada...")
-    clf = train_model(X_all, y_all)
-    evaluate_model(X_all, y_all)
-
-    model_path = "models/rf_af_model.joblib"
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
-    joblib.dump(clf, model_path)
-    print(f"💾 Model guardat a: {model_path}")
+    clf = evaluate_and_train(X_all, y_all)
+    if clf:
+        os.makedirs("models", exist_ok=True)
+        joblib.dump(clf, "models/rf_af_model.joblib")
+        print("✅ Model guardat a models/rf_af_model.joblib")
 
 if __name__ == "__main__":
     main()
