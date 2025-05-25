@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 #ldkdkds
 # Ruta al registro sin extensión
-record_path = '../data/Long-Term_AF/05'
+record_path = '../data_prova/data_healthy/16265'
 # record_path = '../data/MIT-BIH_afdb/04126'
 
 '''
@@ -23,6 +23,7 @@ annotation = wfdb.rdann(record_path, 'atr')
 senyal = record.p_signal
 
 
+print(record.sig_name)
 # Mostrar información básica
 print("Señal:", record.p_signal.shape)
 print("Frecuencia de muestreo:", record.fs)

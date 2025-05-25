@@ -1,8 +1,6 @@
 # Importem els mòduls necessaris
 # Per importar les dades preses al bitalino
-from pyhrv.hrv import hrv
 from opensignalsreader import OpenSignalsReader
-from biosppy.signals.ecg import ecg
 # Per processar la senyal
 import os
 import numpy as np
@@ -60,8 +58,9 @@ def extract_rr_parameters(qrs_inds, fs, min_beats=5):
     pnn50 = nn50 / len(rr) * 100
     return {'meanRR': mean_rr, 'stdRR': std_rr, 'RMSSD': rmssd, 'pNN50': pnn50}
 
+model = joblib.load('models/rf_af_model.joblib') # Carreguem el model ja entrenat
 
-def load_windows(sig_f, qrs_inds, fs, window_sec=5): # Reduit a 5 segons pq la mostra es petita
+def load_windows(sig_f, qrs_inds, fs, window_sec=10): # Reduit a 5 segons pq la mostra es petita
 
     """
     Carrega finestres i extreu característiques RR per múltiples registres.
@@ -94,9 +93,10 @@ def load_windows(sig_f, qrs_inds, fs, window_sec=5): # Reduit a 5 segons pq la m
 
 
         # etiqueta AF si el model ho indica
-        label = 0 # preset: normal
         # Ajustar les dades a les compatibles amb el model
         x = np.array(vals).reshape(1, -1)
+        # El model classifica el segment.
+        label = model.predict(x)[0]
         """
         if ann and e > first_af:
             # marca si hi ha algun 'AFIB' dins la finestra
@@ -127,5 +127,7 @@ qrs_inds = detect_qrs(signal_filtered, 250)
 print("Senyal filtrada i índexs de R detectats.")
 print(qrs_inds.shape) # (14, 1)
 # El codi ha de segmentar el senyal en finestres de 10 segons i aplicar a cadascuna el model per determinar si hi ha o no AF
-aplicar_load_windows = load_windows(signal_filtered,qrs_inds, 250, window_sec=10)
-print(aplicar_load_windows) 
+prediccio = load_windows(signal_filtered,qrs_inds, 250, window_sec=10)
+print(prediccio)
+# Els zero signifiquen que hi ha o no FA?
+# Hay que hacer que haya algún indicador (sonido/alerta...) cuando hay FA positiva.

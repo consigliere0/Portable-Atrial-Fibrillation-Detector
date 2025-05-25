@@ -3,6 +3,7 @@ print('Hello')
 from pyhrv.hrv import hrv
 from opensignalsreader import OpenSignalsReader
 from biosppy.signals.ecg import ecg
+import joblib
 
 # IMPORT DATA
 # Specify the file path
@@ -16,3 +17,5 @@ acq = OpenSignalsReader(path)
 signal = acq.signal('ECG')
 # What kind of data is this?
 print(type(signal))
+
+model = joblib.load("models/rf_af_model.joblib")
