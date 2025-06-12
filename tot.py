@@ -14,7 +14,9 @@ import joblib
 # Specify the file path
 # From bitalino: (PROVAR RUTA EN ORDINADOR LAURA)
 # path = "C:\Users\JULIANA BLANCO\Documents\OpenSignals (r)evolution\files\Prueba1.txt"
-path = 'Prueba1.txt' #Aquest és l'arxiu de prova que tenim aquí
+path = "C:/Users/laura/Documents/OpenSignals (r)evolution/files/juliana1.txt"
+# path = "C:/Users/laura/Documents/OpenSignals (r)evolution/files/PEF2/juliana.txt"
+# path = 'prueba.txt' #Aquest és l'arxiu de prova que tenim aquí
 # Load the acquisition file
 acq = OpenSignalsReader(path)
 
@@ -115,7 +117,7 @@ def load_windows(sig_f, qrs_inds, fs, window_sec=10): # Reduit a 5 segons pq la 
 
 # El bitalino mostreja a 1000 Hz
 # El registre de la Laura mostreja a 250 Hz
-# Cal mostrejar el senyal de lbitalino per a que les freqüencies coincideixin
+# Cal mostrejar el senyal del bitalino per a que les freqüencies coincideixin
 signal = signal_bitalino[::4]
 print(signal.shape) # (2925, 1)
 # S'apliquen els filtres
