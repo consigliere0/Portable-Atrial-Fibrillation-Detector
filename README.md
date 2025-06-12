@@ -8,8 +8,8 @@ The processing pipeline includes signal resampling, band-pass filtering, and QRS
 - [1. Features](#1-features)
 - [2. Running instructions](#2-running-instructions)
 - [3. Pipeline overview](#3-pipeline-overview)
-- [Data source](#data-source)
-- [4. License](#4-license)
+- [4. Data source](#data-source)
+- [5. License](#4-license)
 ---
 ## 1. Features
 
