@@ -1,60 +1,118 @@
-# main_prova.py
+# ====================
+# IMPORTS
+# ====================
+from opensignalsreader import OpenSignalsReader
 import os
-import sys
 import numpy as np
+import wfdb
+from scipy.signal import butter, filtfilt, iirnotch
+from wfdb import processing
 import joblib
-# Afegim source a sys.path per trobar pipeline_prova.py
-sys.path.append(os.path.join(os.path.dirname(__file__), 'source'))
-from pipeline_prova import load_windows
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+import os
 
-if __name__ == '__main__':
-    base = 'data_prova'
-    dirs = {
-        'AFIB': os.path.join(base, 'data_afib'),
-        'Healthy': os.path.join(base, 'data_healthy')
-    }
-    window_sec = 30
+# ========================
+# LOAD DATA FROM BITALINO
+# ========================
+# replace path with local folder containing the .txt file from the BITalino
+path = os.path.join(os.path.dirname(__file__), 'source', 'healthy_patient_example.txt')
 
-    def list_recs(path):
-        return sorted({os.path.splitext(f)[0] for f in os.listdir(path) if f.endswith('.dat')})
+acq = OpenSignalsReader(path)
+signal_bitalino = acq.signal('ECG')
+print(type(signal_bitalino))
+print(signal_bitalino.shape)
 
-    X_parts, y_parts = [], []
-    for label, d in dirs.items():
-        recs = list_recs(d)
-        print(f"{label}: {len(recs)} registres a {d}")
-        X, y = load_windows(recs, d, window_sec)
-        if X.size == 0:
-            raise RuntimeError(f"No finestres vàlides de {label} a {d}")
-        # Assignem etiquetes clares per carpeta
-        if label == 'AFIB':
-            y = np.ones_like(y)
-        else:  # Healthy
-            y = np.zeros_like(y)
-        X_parts.append(X)
-        y_parts.append(y)
+# ======================================
+# FILTERING AND QRS DETECTION FUNCTIONS
+# ======================================
+def bandpass_filter(sig, fs, lowcut=0.5, highcut=40.0, order=4):
+    """Applies a bandpass filter."""
+    nyq = fs / 2
+    b, a = butter(order, [lowcut / nyq, highcut / nyq], btype='band')
+    return filtfilt(b, a, sig)
 
-    # Combina dades
-    X = np.vstack(X_parts)
-    y = np.concatenate(y_parts)
-    print(f"Total finestres: {len(y)}, AF={np.sum(y)}, Normals={len(y)-np.sum(y)}")
+def notch_filter(sig, fs, freq=50.0, Q=30):
+    """Removes powerline noise (50 Hz notch)."""
+    b, a = iirnotch(freq / (fs / 2), Q)
+    return filtfilt(b, a, sig)
 
-    # Disseny del pipeline i validació
-    clf = Pipeline([
-        ('scaler', StandardScaler()),
-        ('rf', RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1))
-    ])
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    scores = cross_val_score(clf, X, y, cv=cv, scoring='roc_auc')
-    print(f'AUC 5-fold estratificat: {np.nanmean(scores):.3f}')
+def detect_qrs(sig, fs):
+    """Detects R peaks using WFDB's GQRS."""
+    return processing.gqrs_detect(sig, fs)
 
-    # Entrenament final
-    clf.fit(X, y)
+# ============================
+# FEATURE EXTRACTION FUNCTION
+# ============================
+def extract_rr_parameters(qrs_inds, fs, min_beats=5):
+    """
+    Computes RR interval statistics for a window.
+    Returns None if fewer than min_beats+1 peaks.
+    """
+    rr = np.diff(qrs_inds) / fs
+    if len(rr) < min_beats:
+        return None
+    mean_rr = np.mean(rr)
+    std_rr = np.std(rr)
+    rmssd = np.sqrt(np.mean(np.square(np.diff(rr))))
+    nn50 = np.sum(np.abs(np.diff(rr)) > 0.05)
+    pnn50 = nn50 / len(rr) * 100
+    return {'meanRR': mean_rr, 'stdRR': std_rr, 'RMSSD': rmssd, 'pNN50': pnn50}
 
-    # Desa el model
-    os.makedirs('models', exist_ok=True)
-    joblib.dump(clf, os.path.join('models', 'rf_af_model.joblib'))
-    print('✅ Model entrenat i desat com models/rf_af_model.joblib')
+# ====================
+# LOAD TRAINED MODEL
+# ====================
+model = joblib.load('models/rf_af_model.joblib')
+
+# ======================================
+# WINDOWING AND CLASSIFICATION FUNCTION
+# ======================================
+def load_windows(sig_f, qrs_inds, fs, window_sec=10):
+    """
+    Segments signal into windows and extracts RR features.
+    
+    Returns:
+    - X: array (n,4) of features
+    - y: array (n,) with labels (0 = normal, 1 = AF)
+    """
+    X_all, y_all = [], []
+    win_len = int(window_sec * fs)
+    n_wins = len(sig_f) // win_len
+    valid_count = 0
+    for w in range(n_wins):
+        s = w * win_len
+        e = s + win_len
+        inds = qrs_inds[(qrs_inds >= s) & (qrs_inds < e)] - s
+        feats = extract_rr_parameters(inds, fs)
+        if feats is None:
+            continue
+        vals = [feats[k] for k in ('meanRR', 'stdRR', 'RMSSD', 'pNN50')]
+        x = np.array(vals).reshape(1, -1)
+        label = model.predict(x)[0]
+        X_all.append(vals)
+        y_all.append(label)
+        valid_count += 1
+        print(f"Processed: {valid_count}/{n_wins} valid windows")
+
+    if not X_all:
+        return np.empty((0, 4)), np.empty((0,))
+    return np.array(X_all), np.array(y_all)
+
+# ========================
+# PROCESSING ECG SIGNAL
+# ========================
+# Downsample BITalino signal from 1000 Hz to 250 Hz
+signal = signal_bitalino[::4]
+print(signal.shape)
+
+# Apply filters
+signal_filtered = bandpass_filter(signal, 250)
+signal_filtered = notch_filter(signal_filtered, 250)
+
+# Detect R peaks
+qrs_inds = detect_qrs(signal_filtered, 250)
+print("Filtered signal and detected R peaks.")
+print(qrs_inds.shape)
+
+# Predict AF for each 10-second window
+prediction = load_windows(signal_filtered, qrs_inds, 250, window_sec=10)
+print(prediction)
+# 0: no AF // 1: AF
