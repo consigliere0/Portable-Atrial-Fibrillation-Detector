@@ -57,10 +57,10 @@ The model used is a **Random Forest classifier**, trained using *scikit-learn* o
 
 In the following image one can see the pipeline of the model training software, which includes the `pipeline.py` and `model_training.py` codes.
 
-![Model training pipeline diagram](image.png)
+![Model training pipeline diagram](pipeline_overview.png)
 
 As for the prediction pipeline, featured in `main.py`, the following image provides an overview of the key features.
-![Prediction pipeline overview](image-1.png)
+![Prediction pipeline overview](predictor_overview.png)
 
 ## 4. Data source
 Employed two datasets from the *PhysioNet* repository:
